@@ -29,12 +29,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClic
         <div className="mb-4">
           <h4 className="text-sm font-medium text-gray-700 mb-2">Specifications:</h4>
           <div className="flex flex-wrap gap-1">
-            {product.specifications.slice(0, 2).map((spec, index) => (
+            {(product.specifications ?? []).slice(0, 2).map((spec, index) => (
               <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
                 {spec}
               </span>
             ))}
-            {product.specifications.length > 2 && (
+            {product.specifications && product.specifications.length > 2 && (
               <span className="text-gray-500 text-xs">+{product.specifications.length - 2} more</span>
             )}
           </div>

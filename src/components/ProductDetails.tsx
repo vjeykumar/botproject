@@ -98,7 +98,7 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onBack 
           <div className="bg-gray-50 rounded-lg p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Specifications</h3>
             <div className="grid grid-cols-2 gap-3">
-              {product.specifications.map((spec, index) => (
+              {(product.specifications ?? []).map((spec, index) => (
                 <div key={index} className="flex items-center space-x-2">
                   <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                   <span className="text-gray-700">{spec}</span>
