@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
+import atexit
 from database.mongodb import db
 
 app = Flask(__name__)
@@ -19,6 +20,9 @@ app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
 CORS(app)
+
+# Ensure database connection is closed when the server process exits
+atexit.register(db.close)
 
 # Helper functions
 def hash_password(password: str) -> str:
@@ -265,7 +269,6 @@ def login():
 @app.route('/api/profile', methods=['GET'])
 @jwt_required()
 def get_profile():
-        print("📝 Registration attempt received")
     try:
         user_id = get_jwt_identity()
         user = db.users.find_user_by_id(user_id)
@@ -460,12 +463,6 @@ def not_found(error):
 def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
-# Cleanup on app shutdown
-@app.teardown_appcontext
-def close_db(error):
-    if hasattr(db, 'close'):
-        db.close()
-
 if __name__ == '__main__':
     try:
         print("🚀 Starting Edgecraft Glass API Server...")
@@ -474,9 +471,7 @@ if __name__ == '__main__':
         print("🌐 CORS enabled for frontend integration")
         print("📱 API endpoints ready")
         print("=" * 50)
-        
+
         app.run(debug=True, host='0.0.0.0', port=5000)
     except Exception as e:
         print(f"❌ Failed to start server: {e}")
-    finally:
-        db.close()
