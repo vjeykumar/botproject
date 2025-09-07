@@ -3,6 +3,7 @@ import { apiService } from '../services/api';
 
 interface User {
   id: string;
+  uid?: string;
   name: string;
   email: string;
   role?: 'user' | 'admin';
@@ -41,6 +42,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await apiService.login(credentials);
       if (response.user) {
+        // Ensure compatibility with components expecting a `uid` property
+        if (!response.user.uid) {
+          response.user.uid = response.user.id;
+        }
+
         // Check if user is admin based on email or explicit role
         if (response.user.email.toLowerCase().includes('admin') || response.user.role === 'admin') {
           response.user.role = 'admin';
@@ -64,7 +70,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await apiService.register(userData);
       if (response.user) {
-        response.user.role = 'user'; // New registrations are regular users
+        // New registrations are regular users
+        response.user.role = 'user';
+
+        // Provide a uid field for components built with Firebase-style auth
+        if (!response.user.uid) {
+          response.user.uid = response.user.id;
+        }
       }
       setUser(response.user);
       localStorage.setItem('user', JSON.stringify(response.user));
@@ -92,7 +104,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const savedUser = localStorage.getItem('user');
     const savedToken = localStorage.getItem('access_token');
     if (savedUser && savedToken) {
-      setUser(JSON.parse(savedUser));
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        if (parsedUser && !parsedUser.uid && parsedUser.id) {
+          parsedUser.uid = parsedUser.id;
+        }
+        setUser(parsedUser);
+      } catch {
+        // Ignore parsing errors and clear invalid data
+        localStorage.removeItem('user');
+      }
     }
   }, []);
 
