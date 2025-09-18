@@ -7,6 +7,7 @@ import os
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 import atexit
+import re
 
 # Import database with error handling
 try:
@@ -349,27 +350,35 @@ def create_order():
         if billing_missing:
             print(f"❌ Missing billing info fields: {billing_missing}")
             return jsonify({'error': f'Missing billing information: {", ".join(billing_missing)}'}), 400
-        
-        # Validate billing info data
-        import re
+
+        # Validate billing info data with sanitization
+        billing_info = data['billing_info']
+
+        sanitized_billing_info = {
+            'email': str(billing_info.get('email', '')).strip().lower(),
+            'phone': re.sub(r'\D', '', str(billing_info.get('phone', ''))),
+            'address': str(billing_info.get('address', '')).strip(),
+            'city': str(billing_info.get('city', '')).strip(),
+            'state': str(billing_info.get('state', '')).strip(),
+            'pincode': re.sub(r'\D', '', str(billing_info.get('pincode', '')))
+        }
+
         email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
-        if not re.match(email_pattern, data['billing_info']['email']):
+        if not re.match(email_pattern, sanitized_billing_info['email']):
             return jsonify({'error': 'Invalid email format'}), 400
-        
-        phone_pattern = r'^\d{10}$'
-        if not re.match(phone_pattern, data['billing_info']['phone']):
+
+        if len(sanitized_billing_info['phone']) != 10:
             return jsonify({'error': 'Invalid phone number format (10 digits required)'}), 400
-        
-        pincode_pattern = r'^\d{5,6}$'
-        if not re.match(pincode_pattern, data['billing_info']['pincode']):
+
+        if len(sanitized_billing_info['pincode']) not in (5, 6):
             return jsonify({'error': 'Invalid pincode format (5-6 digits required)'}), 400
-        
+
         # Create order data
         order_data = {
             'user_id': user_id,
             'total_amount': data['total_amount'],
             'payment_method': data['payment_method'],
-            'billing_info': data['billing_info'],
+            'billing_info': sanitized_billing_info,
             'status': 'confirmed',
             'items': data['items']
         }
