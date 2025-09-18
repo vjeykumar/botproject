@@ -11,9 +11,9 @@ import atexit
 # Import database with error handling
 try:
     from database.mongodb import db
-    print("✅ Database connection established")
+    print("✅ Database module imported")
 except Exception as e:
-    print(f"⚠️ Database connection failed: {e}")
+    print(f"⚠️ Database import failed: {e}")
     print("🔄 Running in test mode without database")
     db = None
 
@@ -30,7 +30,7 @@ PORT = int(os.environ.get('PORT', 5000))
 # Initialize extensions
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
-CORS(app, origins=["https://vjeykumar-botproject-w7zc.bolt.host", "http://localhost:5173", "http://localhost:3000"])
+CORS(app, origins=["*"])  # Allow all origins for now, restrict in production
 
 # Ensure database connection is closed when the server process exits
 if db:
@@ -579,10 +579,10 @@ def internal_error(error):
 
 if __name__ == '__main__':
     try:
-        print("🚀 Starting Edgecraft Glass API Server...")
-        print("📊 Database connection established")
+        print("🚀 Starting Edgecraft Glass API Server on port", PORT)
+        print("📊 Database connection:", "✅ Connected" if db else "❌ Not available")
         print("🔐 JWT authentication enabled")
-        print("🌐 CORS enabled for frontend integration")
+        print("🌐 CORS enabled for all origins")
         print("📱 API endpoints ready")
         print("=" * 50)
 
