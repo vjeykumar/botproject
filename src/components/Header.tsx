@@ -1,11 +1,11 @@
 import React from 'react';
-import { ShoppingCart, Diamond, Gift, ArrowLeft, Star, User, LogOut } from 'lucide-react';
+import { ShoppingCart, Diamond, Gift, ArrowLeft, Star, User, LogOut, Package } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 
 interface HeaderProps {
-  activeSection: 'products' | 'gifts' | 'cart' | 'feedback';
-  setActiveSection: (section: 'products' | 'gifts' | 'cart' | 'feedback') => void;
+  activeSection: 'products' | 'gifts' | 'cart' | 'feedback' | 'orders';
+  setActiveSection: (section: 'products' | 'gifts' | 'cart' | 'feedback' | 'orders') => void;
   onBackToProducts?: () => void;
   showBackButton?: boolean;
 }
@@ -67,6 +67,18 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Gift className="h-5 w-5" />
               <span className="font-medium">Gifts</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveSection('orders')}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                activeSection === 'orders'
+                  ? 'bg-blue-100 text-blue-700 shadow-md'
+                  : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+              }`}
+            >
+              <Package className="h-5 w-5" />
+              <span className="font-medium">Orders</span>
             </button>
             
             <button

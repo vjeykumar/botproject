@@ -7,6 +7,7 @@ import { ProductCatalog } from './components/ProductCatalog';
 import { ProductDetails } from './components/ProductDetails';
 import { GiftProducts } from './components/GiftProducts';
 import { Cart } from './components/Cart';
+import { OrdersPage } from './components/OrdersPage';
 import { CustomerFeedback } from './components/CustomerFeedback';
 import { Footer } from './components/Footer';
 import { CartProvider } from './contexts/CartContext';
@@ -14,7 +15,7 @@ import { Product } from './components/ProductCatalog';
 
 function AppContent() {
   const { isAuthenticated } = useAuth();
-  const [activeSection, setActiveSection] = useState<'products' | 'gifts' | 'cart' | 'feedback'>('products');
+  const [activeSection, setActiveSection] = useState<'products' | 'gifts' | 'cart' | 'feedback' | 'orders'>('products');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   if (!isAuthenticated) {
@@ -40,6 +41,7 @@ function AppContent() {
         ) : (
           <>
             {activeSection === 'products' && <ProductCatalog onProductClick={setSelectedProduct} />}
+            {activeSection === 'orders' && <OrdersPage />}
             {activeSection === 'feedback' && <CustomerFeedback />}
           </>
         )}
