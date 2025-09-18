@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { ProductCard } from './ProductCard';
 import { Search, Filter } from 'lucide-react';
 import { apiService } from '../services/api';
+import { resolveProductImage } from '../utils/productImages';
 
 export interface Product {
   id: string;
@@ -10,7 +11,7 @@ export interface Product {
   category: string;
   description: string;
   basePrice: number;
-  image: string;
+  image?: string | null;
   specifications?: string[];
 }
 
@@ -31,7 +32,21 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ onProductClick }
       try {
         setLoading(true);
         const response = await apiService.getProducts();
-        setProducts(response.products || []);
+        const normalizedProducts = (response.products || []).map((product: Product) => {
+          const { src } = resolveProductImage({
+            image: product.image,
+            name: product.name,
+            description: product.description,
+            category: product.category,
+          });
+
+          return {
+            ...product,
+            image: src,
+          };
+        });
+
+        setProducts(normalizedProducts);
         setError(null);
       } catch (err) {
         console.error('Failed to fetch products:', err);
@@ -65,7 +80,13 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ onProductClick }
             image: 'https://images.pexels.com/photos/1571453/pexels-photo-1571453.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&fit=crop',
             specifications: ['8mm thickness', 'Safety certified', 'Heat resistant', 'Shatterproof']
           }
-        ]);
+        ].map(product => {
+          const { src } = resolveProductImage(product);
+          return {
+            ...product,
+            image: src,
+          };
+        }));
       } finally {
         setLoading(false);
       }

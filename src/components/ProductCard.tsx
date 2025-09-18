@@ -1,6 +1,7 @@
 import React from 'react';
 import { Ruler, Eye } from 'lucide-react';
 import { Product } from './ProductCatalog';
+import { resolveProductImage } from '../utils/productImages';
 
 interface ProductCardProps {
   product: Product;
@@ -8,13 +9,20 @@ interface ProductCardProps {
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({ product, onProductClick }) => {
+  const { src, placeholder } = resolveProductImage(product);
+
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
       <div className="relative h-48 overflow-hidden">
         <img
-          src={product.image}
+          src={src}
           alt={product.name}
           className="w-full h-full object-cover transition-transform duration-300 hover:scale-105 cursor-pointer"
+          onError={(event) => {
+            if (event.currentTarget.src !== placeholder) {
+              event.currentTarget.src = placeholder;
+            }
+          }}
           onClick={() => onProductClick(product)}
         />
         <div className="absolute top-4 right-4 bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-medium">
