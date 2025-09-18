@@ -3,6 +3,7 @@ import os
 import sys
 from datetime import datetime
 from unittest.mock import patch, MagicMock
+from werkzeug.security import generate_password_hash
 
 # Add the backend directory to the Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -36,7 +37,7 @@ def mock_db():
             'id': '507f1f77bcf86cd799439011',
             'name': 'Test User',
             'email': 'test@example.com',
-            'password_hash': '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/kzd9jFvPW',  # 'password123'
+            'password_hash': generate_password_hash('password123'),
             'created_at': datetime.utcnow()
         }
         

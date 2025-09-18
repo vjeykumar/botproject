@@ -1,6 +1,7 @@
 import pytest
 import json
 from unittest.mock import patch
+from werkzeug.security import generate_password_hash
 
 class TestAuthentication:
     """Test cases for authentication endpoints"""
@@ -43,7 +44,8 @@ class TestAuthentication:
         # Mock existing user
         mock_db.users.find_user_by_email.return_value = {
             'id': '507f1f77bcf86cd799439011',
-            'email': 'existing@example.com'
+            'email': 'existing@example.com',
+            'password_hash': generate_password_hash('password123')
         }
         
         data = {
@@ -149,7 +151,7 @@ class TestAuthentication:
             'id': '507f1f77bcf86cd799439011',
             'name': 'Admin User',
             'email': 'admin@edgecraftglass.com',
-            'password_hash': '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/kzd9jFvPW',
+            'password_hash': generate_password_hash('admin123'),
             'created_at': '2025-01-01T00:00:00'
         }
         

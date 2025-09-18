@@ -7,7 +7,15 @@ import os
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 import atexit
-from database.mongodb import db
+
+# Import database with error handling
+try:
+    from database.mongodb import db
+    print("✅ Database connection established")
+except Exception as e:
+    print(f"⚠️ Database connection failed: {e}")
+    print("🔄 Running in test mode without database")
+    db = None
 
 app = Flask(__name__)
 
@@ -22,7 +30,8 @@ jwt = JWTManager(app)
 CORS(app)
 
 # Ensure database connection is closed when the server process exits
-atexit.register(db.close)
+if db:
+    atexit.register(db.close)
 
 # Helper functions
 def hash_password(password: str) -> str:
@@ -177,6 +186,9 @@ def clear_cart():
 @app.route('/api/register', methods=['POST'])
 def register():
     try:
+        if not db:
+            return jsonify({'error': 'Database not available'}), 503
+            
         data = request.get_json()
         
         # Validate required fields
@@ -227,6 +239,9 @@ def register():
 @app.route('/api/login', methods=['POST'])
 def login():
     try:
+        if not db:
+            return jsonify({'error': 'Database not available'}), 503
+            
         print("🔐 Login attempt received")
         data = request.get_json()
         print(f"📧 Login data: {data.get('email', 'No email')}")
@@ -288,6 +303,9 @@ def get_profile():
 @jwt_required()
 def create_order():
     try:
+        if not db:
+            return jsonify({'error': 'Database not available'}), 503
+            
         user_id = get_jwt_identity()
         data = request.get_json()
         print(f"📦 Order data received: {data}")

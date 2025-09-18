@@ -72,7 +72,7 @@ class TestIntegration:
             'id': '507f1f77bcf86cd799439011',
             'name': 'Admin User',
             'email': 'admin@edgecraftglass.com',
-            'password_hash': '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/kzd9jFvPW',
+            'password_hash': generate_password_hash('admin123'),
             'created_at': '2025-01-01T00:00:00'
         }
         
