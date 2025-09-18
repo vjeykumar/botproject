@@ -1,6 +1,7 @@
 import pytest
 import json
 from unittest.mock import patch
+from werkzeug.security import generate_password_hash
 
 class TestIntegration:
     """Integration test cases for complete workflows"""

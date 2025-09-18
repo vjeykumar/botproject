@@ -310,22 +310,56 @@ def create_order():
         data = request.get_json()
         print(f"📦 Order data received: {data}")
         
+        # Enhanced validation with detailed error messages
         # Validate required fields
         required_fields = ['items', 'total_amount', 'payment_method', 'billing_info']
-        if not all(k in data for k in required_fields):
-            print(f"❌ Missing required fields. Received: {list(data.keys())}")
-            return jsonify({'error': 'Missing required fields'}), 400
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            print(f"❌ Missing required fields: {missing_fields}")
+            return jsonify({'error': f'Missing required fields: {", ".join(missing_fields)}'}), 400
         
         # Validate items array
         if not isinstance(data['items'], list) or len(data['items']) == 0:
             print("❌ Items must be a non-empty array")
             return jsonify({'error': 'Items must be a non-empty array'}), 400
         
+        # Validate each item in the array
+        for i, item in enumerate(data['items']):
+            item_required = ['id', 'name', 'price', 'quantity']
+            item_missing = [field for field in item_required if field not in item]
+            if item_missing:
+                return jsonify({'error': f'Item {i+1} missing fields: {", ".join(item_missing)}'}), 400
+            
+            # Validate item data types
+            if not isinstance(item['price'], (int, float)) or item['price'] <= 0:
+                return jsonify({'error': f'Item {i+1} has invalid price'}), 400
+            if not isinstance(item['quantity'], int) or item['quantity'] <= 0:
+                return jsonify({'error': f'Item {i+1} has invalid quantity'}), 400
+        
+        # Validate total_amount
+        if not isinstance(data['total_amount'], (int, float)) or data['total_amount'] <= 0:
+            return jsonify({'error': 'Invalid total amount'}), 400
+        
         # Validate billing_info structure
         billing_required = ['email', 'phone', 'address', 'city', 'state', 'pincode']
-        if not all(k in data['billing_info'] for k in billing_required):
-            print(f"❌ Missing billing info fields. Received: {list(data['billing_info'].keys())}")
-            return jsonify({'error': 'Missing required billing information'}), 400
+        billing_missing = [field for field in billing_required if field not in data['billing_info']]
+        if billing_missing:
+            print(f"❌ Missing billing info fields: {billing_missing}")
+            return jsonify({'error': f'Missing billing information: {", ".join(billing_missing)}'}), 400
+        
+        # Validate billing info data
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, data['billing_info']['email']):
+            return jsonify({'error': 'Invalid email format'}), 400
+        
+        phone_pattern = r'^\d{10}$'
+        if not re.match(phone_pattern, data['billing_info']['phone']):
+            return jsonify({'error': 'Invalid phone number format (10 digits required)'}), 400
+        
+        pincode_pattern = r'^\d{5,6}$'
+        if not re.match(pincode_pattern, data['billing_info']['pincode']):
+            return jsonify({'error': 'Invalid pincode format (5-6 digits required)'}), 400
         
         # Create order data
         order_data = {
@@ -446,8 +480,41 @@ def process_payment():
         payment_method = data.get('payment_method')
         amount = data.get('amount')
         
-        if not payment_method or not amount:
-            return jsonify({'error': 'Missing payment details'}), 400
+        # Enhanced validation
+        if not payment_method:
+            return jsonify({'error': 'Payment method is required'}), 400
+        
+        if not amount:
+            return jsonify({'error': 'Payment amount is required'}), 400
+        
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            return jsonify({'error': 'Invalid payment amount'}), 400
+        
+        valid_methods = ['Credit Card', 'UPI', 'Net Banking']
+        if payment_method not in valid_methods:
+            return jsonify({'error': f'Invalid payment method. Must be one of: {", ".join(valid_methods)}'}), 400
+        
+        # Validate payment method specific details
+        if payment_method == 'Credit Card':
+            card_details = data.get('card_details', {})
+            required_card_fields = ['card_number', 'expiry_date', 'cvv', 'card_name']
+            missing_card_fields = [field for field in required_card_fields if not card_details.get(field)]
+            if missing_card_fields:
+                return jsonify({'error': f'Missing card details: {", ".join(missing_card_fields)}'}), 400
+        
+        elif payment_method == 'UPI':
+            upi_id = data.get('upi_id')
+            if not upi_id:
+                return jsonify({'error': 'UPI ID is required for UPI payments'}), 400
+            import re
+            upi_pattern = r'^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+'
+            if not re.match(upi_pattern, upi_id):
+                return jsonify({'error': 'Invalid UPI ID format'}), 400
+        
+        elif payment_method == 'Net Banking':
+            bank = data.get('bank')
+            if not bank:
+                return jsonify({'error': 'Bank selection is required for net banking'}), 400
         
         # Simulate payment processing delay
         import time
@@ -465,6 +532,7 @@ def process_payment():
         }), 200
         
     except Exception as e:
+        print(f"💥 Payment processing error: {e}")
         return jsonify({'error': 'Payment processing failed'}), 500
 
 @app.route('/api/health', methods=['GET'])
