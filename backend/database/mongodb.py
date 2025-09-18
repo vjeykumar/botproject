@@ -161,8 +161,12 @@ class OrderOperations:
             order_data['_id'] = ObjectId()
             
             # Generate order number if not provided
-            if 'order_number' not in order_data:
+            if 'order_number' not in order_data or not order_data['order_number']:
                 order_data['order_number'] = self._generate_order_number()
+
+            # Ensure legacy orderId field is populated for existing indexes
+            if not order_data.get('orderId'):
+                order_data['orderId'] = order_data['order_number']
             
             print(f"📦 Inserting order with order_number: {order_data['order_number']}")
             result = self.collection.insert_one(order_data)
@@ -195,7 +199,9 @@ class OrderOperations:
             for order in orders:
                 order['id'] = str(order['_id'])
                 del order['_id']
-            
+                if 'orderId' not in order or not order['orderId']:
+                    order['orderId'] = order.get('order_number')
+
             return orders
         except Exception as e:
             raise Exception(f"Failed to find orders: {e}")
@@ -211,7 +217,9 @@ class OrderOperations:
             if order:
                 order['id'] = str(order['_id'])
                 del order['_id']
-            
+                if 'orderId' not in order or not order['orderId']:
+                    order['orderId'] = order.get('order_number')
+
             return order
         except Exception as e:
             raise Exception(f"Failed to find order: {e}")
