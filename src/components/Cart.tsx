@@ -19,6 +19,13 @@ export const Cart: React.FC<CartProps> = ({ onBackToProducts }) => {
   const handlePaymentComplete = () => {
     setCurrentStep('success');
   };
+  
+  const handleViewOrders = () => {
+    setCurrentStep('cart');
+    onBackToProducts();
+    // This would ideally trigger navigation to orders page
+    // For now, we'll just go back to products
+  };
 
   const handleBackToCart = () => {
     setCurrentStep('cart');
@@ -42,6 +49,7 @@ export const Cart: React.FC<CartProps> = ({ onBackToProducts }) => {
     return (
       <PaymentSuccess 
         onBackToHome={handleBackToHome}
+        onViewOrders={handleViewOrders}
       />
     );
   }

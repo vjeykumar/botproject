@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ArrowLeft, CreditCard, Smartphone, Building, Shield, Lock, CheckCircle } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { apiService } from '../services/api';
 
 interface PaymentScreenProps {
   onBack: () => void;
@@ -44,11 +45,37 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onPaymentC
     e.preventDefault();
     setIsProcessing(true);
 
-    // Simulate payment processing
-    setTimeout(() => {
+    try {
+      // Create order in backend
+      const orderData = {
+        items: cartItems.map(item => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity,
+          customization: item.customization
+        })),
+        total_amount: total,
+        payment_method: paymentMethod === 'card' ? 'Credit Card' : 
+                      paymentMethod === 'upi' ? 'UPI' : 'Net Banking',
+        billing_info: {
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          pincode: formData.pincode
+        }
+      };
+
+      await apiService.createOrder(orderData);
       setIsProcessing(false);
       onPaymentComplete();
-    }, 3000);
+    } catch (error) {
+      console.error('Payment failed:', error);
+      setIsProcessing(false);
+      // You might want to show an error message here
+    }
   };
 
   const formatCardNumber = (value: string) => {

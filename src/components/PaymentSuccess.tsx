@@ -3,9 +3,10 @@ import { CheckCircle, Download, Home, Package } from 'lucide-react';
 
 interface PaymentSuccessProps {
   onBackToHome: () => void;
+  onViewOrders?: () => void;
 }
 
-export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ onBackToHome }) => {
+export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ onBackToHome, onViewOrders }) => {
   const orderNumber = `EG${Date.now().toString().slice(-6)}`;
   const estimatedDelivery = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString();
 
@@ -89,7 +90,17 @@ export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ onBackToHome }) 
           </div>
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {onViewOrders && (
+              <button
+                onClick={onViewOrders}
+                className="flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-3 rounded-lg font-medium transition-colors"
+              >
+                <Package className="h-5 w-5" />
+                <span>View Orders</span>
+              </button>
+            )}
+            
             <button className="flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors">
               <Download className="h-5 w-5" />
               <span>Download Invoice</span>
@@ -102,7 +113,7 @@ export const PaymentSuccess: React.FC<PaymentSuccessProps> = ({ onBackToHome }) 
             
             <button
               onClick={onBackToHome}
-              className="flex items-center justify-center space-x-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-6 py-3 rounded-lg font-medium transition-colors"
+              className="flex items-center justify-center space-x-2 border border-gray-300 hover:bg-gray-50 text-gray-700 px-4 py-3 rounded-lg font-medium transition-colors"
             >
               <Home className="h-5 w-5" />
               <span>Continue Shopping</span>

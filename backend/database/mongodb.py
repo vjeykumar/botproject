@@ -197,6 +197,7 @@ class OrderOperations:
         timestamp = datetime.utcnow().strftime('%Y%m%d')
         unique_id = str(uuid.uuid4())[:6].upper()
         return f"EG{timestamp}{unique_id}"
+
 class ProductOperations:
     def __init__(self, db):
         self.collection = db.products
