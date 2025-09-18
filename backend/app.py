@@ -24,10 +24,13 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-string')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
+# Get port from environment variable for deployment
+PORT = int(os.environ.get('PORT', 5000))
+
 # Initialize extensions
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
-CORS(app)
+CORS(app, origins=["https://vjeykumar-botproject-w7zc.bolt.host", "http://localhost:5173", "http://localhost:3000"])
 
 # Ensure database connection is closed when the server process exits
 if db:
@@ -583,6 +586,6 @@ if __name__ == '__main__':
         print("📱 API endpoints ready")
         print("=" * 50)
 
-        app.run(debug=True, host='0.0.0.0', port=5000)
+        app.run(debug=False, host='0.0.0.0', port=PORT)
     except Exception as e:
         print(f"❌ Failed to start server: {e}")

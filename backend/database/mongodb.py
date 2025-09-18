@@ -17,7 +17,7 @@ class MongoDB:
         """Connect to MongoDB"""
         try:
             # MongoDB connection string - compatible with MongoDB Compass
-            mongo_uri = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
+            mongo_uri = os.getenv('MONGODB_URI', 'mongodb+srv://edgecraft:glass2025@cluster0.mongodb.net/')
             db_name = os.getenv('MONGODB_DB_NAME', 'edgecraft_glass')
             
             self.client = MongoClient(mongo_uri)
