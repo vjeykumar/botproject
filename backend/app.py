@@ -290,12 +290,24 @@ def create_order():
     try:
         user_id = get_jwt_identity()
         data = request.get_json()
-        print(f"📧 Registration data: {data.get('email', 'No email')}")
+        print(f"📦 Order data received: {data}")
         
         # Validate required fields
         required_fields = ['items', 'total_amount', 'payment_method', 'billing_info']
         if not all(k in data for k in required_fields):
+            print(f"❌ Missing required fields. Received: {list(data.keys())}")
             return jsonify({'error': 'Missing required fields'}), 400
+        
+        # Validate items array
+        if not isinstance(data['items'], list) or len(data['items']) == 0:
+            print("❌ Items must be a non-empty array")
+            return jsonify({'error': 'Items must be a non-empty array'}), 400
+        
+        # Validate billing_info structure
+        billing_required = ['email', 'phone', 'address', 'city', 'state', 'pincode']
+        if not all(k in data['billing_info'] for k in billing_required):
+            print(f"❌ Missing billing info fields. Received: {list(data['billing_info'].keys())}")
+            return jsonify({'error': 'Missing required billing information'}), 400
         
         # Create order data
         order_data = {
@@ -307,18 +319,31 @@ def create_order():
             'items': data['items']
         }
         
+        print(f"✅ Creating order with data: {order_data}")
         order = db.orders.create_order(order_data)
+        print(f"✅ Order created successfully: {order.get('order_number', 'Unknown')}")
         
         # Clear cart after successful order
-        db.carts.clear_cart(user_id)
+        try:
+            db.carts.clear_cart(user_id)
+            print("✅ Cart cleared successfully")
+        except Exception as cart_error:
+            print(f"⚠️ Failed to clear cart: {cart_error}")
+            # Don't fail the order creation if cart clearing fails
         
         return jsonify({
             'message': 'Order created successfully',
             'order': order
         }), 201
         
+    except ValueError as e:
+        print(f"❌ Validation error in create_order: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': 'Failed to create order'}), 500
+        print(f"💥 Error in create_order: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to create order: {str(e)}'}), 500
 
 @app.route('/api/orders', methods=['GET'])
 @jwt_required()

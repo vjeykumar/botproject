@@ -46,6 +46,10 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onPaymentC
     setIsProcessing(true);
 
     try {
+      console.log('🔄 Starting payment process...');
+      console.log('Cart items:', cartItems);
+      console.log('Form data:', formData);
+      
       // Create order in backend
       const orderData = {
         items: cartItems.map(item => ({
@@ -68,13 +72,39 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onPaymentC
         }
       };
 
+      console.log('📦 Order data to be sent:', orderData);
+      
+      // Validate required fields before sending
+      if (!orderData.items || orderData.items.length === 0) {
+        throw new Error('No items in cart');
+      }
+      
+      if (!orderData.billing_info.email || !orderData.billing_info.phone) {
+        throw new Error('Please fill in all required billing information');
+      }
+      
+      console.log('✅ Order data validation passed');
       await apiService.createOrder(orderData);
+      console.log('✅ Order created successfully');
       setIsProcessing(false);
       onPaymentComplete();
     } catch (error) {
       console.error('Payment failed:', error);
       setIsProcessing(false);
-      // You might want to show an error message here
+      
+      // Show user-friendly error message
+      let errorMessage = 'Payment failed. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('No items in cart')) {
+          errorMessage = 'Your cart is empty. Please add items before checkout.';
+        } else if (error.message.includes('billing information')) {
+          errorMessage = 'Please fill in all required billing information.';
+        } else if (error.message.includes('server')) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      }
+      
+      alert(errorMessage); // You might want to replace this with a proper error display
     }
   };
 

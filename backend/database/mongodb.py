@@ -133,21 +133,47 @@ class OrderOperations:
     def create_order(self, order_data: Dict) -> Dict:
         """Create a new order"""
         try:
+            print(f"📦 Creating order in database with data: {order_data}")
+            
+            # Validate required fields
+            required_fields = ['user_id', 'total_amount', 'payment_method', 'billing_info', 'items']
+            for field in required_fields:
+                if field not in order_data:
+                    raise ValueError(f"Missing required field: {field}")
+            
+            # Ensure items is a list
+            if not isinstance(order_data['items'], list):
+                raise ValueError("Items must be a list")
+            
+            # Set timestamps
             order_data['created_at'] = datetime.utcnow()
+            order_data['updated_at'] = datetime.utcnow()
             order_data['_id'] = ObjectId()
             
             # Generate order number if not provided
             if 'order_number' not in order_data:
                 order_data['order_number'] = self._generate_order_number()
             
+            print(f"📦 Inserting order with order_number: {order_data['order_number']}")
             result = self.collection.insert_one(order_data)
+            
+            if not result.inserted_id:
+                raise Exception("Failed to insert order into database")
+            
             order_data['id'] = str(result.inserted_id)
             del order_data['_id']
             
+            print(f"✅ Order created successfully with ID: {order_data['id']}")
             return order_data
             
+        except ValueError as e:
+            print(f"❌ Validation error in create_order: {e}")
+            raise e
         except Exception as e:
-            raise Exception(f"Failed to create order: {e}")
+            print(f"💥 Database error in create_order: {e}")
+            import traceback
+            traceback.print_exc()
+            raise Exception(f"Database error: {str(e)}")
     
     def find_orders_by_user(self, user_id: str) -> List[Dict]:
         """Find all orders for a user"""
@@ -193,10 +219,27 @@ class OrderOperations:
     
     def _generate_order_number(self) -> str:
         """Generate unique order number"""
-        import uuid
-        timestamp = datetime.utcnow().strftime('%Y%m%d')
-        unique_id = str(uuid.uuid4())[:6].upper()
-        return f"EG{timestamp}{unique_id}"
+        try:
+            import uuid
+            timestamp = datetime.utcnow().strftime('%Y%m%d')
+            unique_id = str(uuid.uuid4())[:6].upper()
+            order_number = f"EG{timestamp}{unique_id}"
+            
+            # Ensure uniqueness by checking if order number already exists
+            existing = self.collection.find_one({"order_number": order_number})
+            if existing:
+                # If exists, add more randomness
+                unique_id = str(uuid.uuid4())[:8].upper()
+                order_number = f"EG{timestamp}{unique_id}"
+            
+            print(f"📦 Generated order number: {order_number}")
+            return order_number
+            
+        except Exception as e:
+            print(f"💥 Error generating order number: {e}")
+            # Fallback to timestamp-based number
+            import time
+            return f"EG{int(time.time())}"
 
 class ProductOperations:
     def __init__(self, db):
@@ -365,6 +408,15 @@ class CartOperations:
     def clear_cart(self, user_id: str) -> bool:
         """Clear all items from cart"""
         try:
+            print(f"🛒 Clearing cart for user: {user_id}")
+            
+            # Check if cart exists first
+            cart = self.find_cart_by_user(user_id)
+            if not cart:
+                print(f"⚠️ No cart found for user {user_id}, creating empty cart")
+                self.create_cart(user_id)
+                return True
+            
             result = self.collection.update_one(
                 {"user_id": user_id},
                 {
@@ -374,9 +426,14 @@ class CartOperations:
                     }
                 }
             )
-            return result.modified_count > 0
+            
+            success = result.modified_count > 0 or result.matched_count > 0
+            print(f"🛒 Cart clear result - matched: {result.matched_count}, modified: {result.modified_count}")
+            return success
+            
         except Exception as e:
-            raise Exception(f"Failed to clear cart: {e}")
+            print(f"💥 Error clearing cart: {e}")
+            raise Exception(f"Failed to clear cart: {str(e)}")
 
 # Review Operations
 class ReviewOperations:
