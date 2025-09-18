@@ -1,6 +1,7 @@
 from pymongo import MongoClient
 from pymongo.errors import DuplicateKeyError, PyMongoError
 from bson import ObjectId
+from bson.decimal128 import Decimal128
 from datetime import datetime
 import os
 import uuid
@@ -139,6 +140,85 @@ class UserOperations:
 class OrderOperations:
     def __init__(self, db):
         self.collection = db.orders
+
+    @staticmethod
+    def _parse_numeric_value(value: Any) -> Optional[float]:
+        """Safely parse numeric values from various types."""
+        if isinstance(value, Decimal128):
+            try:
+                return float(value.to_decimal())
+            except (TypeError, ValueError):
+                return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError:
+                return None
+        return None
+
+    @staticmethod
+    def _parse_int_value(value: Any) -> int:
+        """Safely parse integers with graceful fallbacks."""
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float):
+            return int(value)
+        if isinstance(value, str):
+            try:
+                return int(float(value))
+            except ValueError:
+                return 0
+        return 0
+
+    def _calculate_order_total(self, items: List[Dict]) -> float:
+        total = 0.0
+        for item in items or []:
+            price = self._parse_numeric_value(item.get('price')) or 0.0
+            quantity = max(self._parse_int_value(item.get('quantity')), 0)
+            total += price * quantity
+        return round(total, 2)
+
+    def _normalize_order(self, raw_order: Dict) -> Dict:
+        order = dict(raw_order)
+
+        order['id'] = str(order['_id'])
+        original_id = order['_id']
+        del order['_id']
+
+        if 'orderId' not in order or not order['orderId']:
+            order['orderId'] = order.get('order_number')
+
+        for date_field in ('created_at', 'updated_at'):
+            if isinstance(order.get(date_field), datetime):
+                order[date_field] = order[date_field].isoformat()
+
+        normalized_total = self._parse_numeric_value(order.get('total_amount'))
+        if normalized_total is None:
+            normalized_total = self._calculate_order_total(order.get('items', []))
+        order['total_amount'] = normalized_total
+
+        normalized_items = []
+        for item in order.get('items', []):
+            normalized_item = dict(item)
+            price = self._parse_numeric_value(normalized_item.get('price'))
+            if price is None:
+                price = 0.0
+            normalized_item['price'] = price
+            normalized_items.append(normalized_item)
+        order['items'] = normalized_items
+
+        if normalized_total is not None and raw_order.get('total_amount') != normalized_total:
+            try:
+                self.collection.update_one(
+                    {'_id': original_id},
+                    {'$set': {'total_amount': normalized_total}}
+                )
+            except Exception as update_error:
+                print(f"⚠️ Failed to update normalized total for order {order.get('order_number')}: {update_error}")
+
+        return order
     
     def create_order(self, order_data: Dict) -> Dict:
         """Create a new order"""
@@ -154,7 +234,26 @@ class OrderOperations:
             # Ensure items is a list
             if not isinstance(order_data['items'], list):
                 raise ValueError("Items must be a list")
-            
+
+            order_data['total_amount'] = self._parse_numeric_value(order_data.get('total_amount'))
+            if order_data['total_amount'] is None or order_data['total_amount'] <= 0:
+                raise ValueError("Invalid total amount")
+
+            normalized_items = []
+            for item in order_data['items']:
+                normalized_item = dict(item)
+                price = self._parse_numeric_value(normalized_item.get('price'))
+                if price is None or price <= 0:
+                    raise ValueError("Invalid item price")
+                normalized_item['price'] = price
+                quantity = self._parse_int_value(normalized_item.get('quantity'))
+                if quantity <= 0:
+                    raise ValueError("Invalid item quantity")
+                normalized_item['quantity'] = quantity
+                normalized_items.append(normalized_item)
+
+            order_data['items'] = normalized_items
+
             # Set timestamps
             order_data['created_at'] = datetime.utcnow()
             order_data['updated_at'] = datetime.utcnow()
@@ -174,11 +273,10 @@ class OrderOperations:
             if not result.inserted_id:
                 raise Exception("Failed to insert order into database")
             
-            order_data['id'] = str(result.inserted_id)
-            del order_data['_id']
-            
-            print(f"✅ Order created successfully with ID: {order_data['id']}")
-            return order_data
+            created_order = self._normalize_order(order_data)
+
+            print(f"✅ Order created successfully with ID: {created_order['id']}")
+            return created_order
             
         except ValueError as e:
             print(f"❌ Validation error in create_order: {e}")
@@ -195,30 +293,21 @@ class OrderOperations:
             orders = list(self.collection.find(
                 {"user_id": user_id}
             ).sort("created_at", -1))
-            
-            for order in orders:
-                order['id'] = str(order['_id'])
-                del order['_id']
-                if 'orderId' not in order or not order['orderId']:
-                    order['orderId'] = order.get('order_number')
 
-            return orders
+            return [self._normalize_order(order) for order in orders]
         except Exception as e:
             raise Exception(f"Failed to find orders: {e}")
-    
+
     def find_order_by_id(self, order_id: str, user_id: str = None) -> Optional[Dict]:
         """Find order by ID"""
         try:
             query = {"_id": ObjectId(order_id)}
             if user_id:
                 query["user_id"] = user_id
-            
+
             order = self.collection.find_one(query)
             if order:
-                order['id'] = str(order['_id'])
-                del order['_id']
-                if 'orderId' not in order or not order['orderId']:
-                    order['orderId'] = order.get('order_number')
+                return self._normalize_order(order)
 
             return order
         except Exception as e:
