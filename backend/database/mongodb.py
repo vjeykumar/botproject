@@ -37,7 +37,11 @@ class MongoDB:
             self._create_indexes()
             
         except Exception as e:
-    
+            print(f"❌ Failed to connect to MongoDB: {e}")
+            self.client = None
+            self.db = None
+            raise Exception(f"Failed to connect to MongoDB: {str(e)}")
+
     def _create_indexes(self):
         """Create database indexes for better performance"""
         try:
