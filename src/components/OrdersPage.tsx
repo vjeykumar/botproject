@@ -21,7 +21,7 @@ interface OrderItem {
 interface Order {
   id: string;
   order_number: string;
-  total_amount: number;
+  total_amount: number | string | null;
   status: string;
   payment_method: string;
   billing_info: {
@@ -46,6 +46,21 @@ export const OrdersPage: React.FC = () => {
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const formatCurrency = (amount: number | string | null | undefined) => {
+    const numericAmount =
+      typeof amount === 'number'
+        ? amount
+        : typeof amount === 'string'
+          ? parseFloat(amount)
+          : 0;
+
+    if (!Number.isFinite(numericAmount)) {
+      return '0.00';
+    }
+
+    return numericAmount.toFixed(2);
+  };
 
   const fetchOrders = async () => {
     try {
@@ -163,7 +178,7 @@ export const OrdersPage: React.FC = () => {
                     )}
                   </div>
                   <div className="text-right">
-                    <div className="font-medium text-gray-800">₹{item.price.toFixed(2)}</div>
+                    <div className="font-medium text-gray-800">₹{formatCurrency(item.price)}</div>
                     <div className="text-sm text-gray-600">Qty: {item.quantity}</div>
                   </div>
                 </div>
@@ -193,7 +208,7 @@ export const OrdersPage: React.FC = () => {
                     <CreditCard className="h-4 w-4 text-gray-600" />
                     <span><strong>Payment Method:</strong> {selectedOrder.payment_method}</span>
                   </div>
-                  <div><strong>Total Amount:</strong> ₹{selectedOrder.total_amount.toFixed(2)}</div>
+                  <div><strong>Total Amount:</strong> ₹{formatCurrency(selectedOrder.total_amount)}</div>
                 </div>
               </div>
             </div>
@@ -265,7 +280,7 @@ export const OrdersPage: React.FC = () => {
                   <div className="mt-4 md:mt-0 flex items-center space-x-4">
                     <div className="text-right">
                       <div className="text-lg font-semibold text-gray-800">
-                        ₹{order.total_amount.toFixed(2)}
+                        ₹{formatCurrency(order.total_amount)}
                       </div>
                       <div className="text-sm text-gray-600">
                         {order.items.length} item{order.items.length !== 1 ? 's' : ''}
