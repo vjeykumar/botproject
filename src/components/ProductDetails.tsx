@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Calculator, ShoppingCart, Star, Shield, Truck, Award } from 'lucide-react';
 import { Product } from './ProductCatalog';
 import { useCart } from '../contexts/CartContext';
+import { resolveProductImage } from '../utils/productImages';
 
 interface ProductDetailsProps {
   product: Product;
@@ -13,6 +14,7 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onBack 
   const [width, setWidth] = useState(36);
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
+  const { src, placeholder } = resolveProductImage(product);
 
   const area = (height * width) / 144; // Convert to square feet
   const totalPrice = area * product.basePrice * quantity;
@@ -53,9 +55,14 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ product, onBack 
         <div className="space-y-4">
           <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
             <img
-              src={product.image}
+              src={src}
               alt={product.name}
               className="w-full h-96 object-cover"
+              onError={(event) => {
+                if (event.currentTarget.src !== placeholder) {
+                  event.currentTarget.src = placeholder;
+                }
+              }}
             />
           </div>
           

@@ -130,3 +130,102 @@ Server will start at `http://localhost:5000`
 - **Indexing**: Optimized database indexes for performance
 - **Data Validation**: Input validation and sanitization
 - **CORS Support**: Cross-origin requests enabled
+
+## Testing
+
+The API includes comprehensive test coverage for all endpoints and functionality.
+
+### Running Tests
+
+#### Install Test Dependencies
+```bash
+pip install -r requirements-test.txt
+```
+
+#### Run All Tests
+```bash
+python tests/run_tests.py
+```
+
+#### Run Specific Test Categories
+```bash
+# Unit tests only
+python tests/run_tests.py unit
+
+# Integration tests
+python tests/run_tests.py integration
+
+# Authentication tests
+python tests/run_tests.py auth
+
+# Product tests
+python tests/run_tests.py products
+
+# Order tests
+python tests/run_tests.py orders
+
+# Cart tests
+python tests/run_tests.py cart
+
+# Review tests
+python tests/run_tests.py reviews
+
+# Payment tests
+python tests/run_tests.py payment
+
+# Health check tests
+python tests/run_tests.py health
+
+# Database tests
+python tests/run_tests.py database
+
+# Error handling tests
+python tests/run_tests.py error
+```
+
+#### Run Tests with Coverage
+```bash
+python tests/run_tests.py --coverage
+```
+
+#### Run Tests with Verbose Output
+```bash
+python tests/run_tests.py --verbose
+```
+
+### Test Structure
+
+- `test_auth.py` - Authentication endpoint tests
+- `test_products.py` - Product management tests
+- `test_orders.py` - Order creation and management tests
+- `test_cart.py` - Shopping cart functionality tests
+- `test_reviews.py` - Review system tests
+- `test_payment.py` - Payment processing tests
+- `test_health.py` - Health check and system status tests
+- `test_database.py` - Database operation tests
+- `test_error_handlers.py` - Error handling tests
+- `test_integration.py` - End-to-end integration tests
+
+### Test Coverage
+
+The test suite covers:
+- ✅ All API endpoints
+- ✅ Authentication and authorization
+- ✅ Data validation
+- ✅ Error handling
+- ✅ Database operations
+- ✅ Integration workflows
+- ✅ Edge cases and security
+
+### Continuous Integration
+
+Tests can be integrated into CI/CD pipelines:
+
+```yaml
+# Example GitHub Actions workflow
+- name: Run Tests
+  run: |
+    pip install -r requirements.txt
+    pip install -r requirements-test.txt
+    python tests/run_tests.py --coverage
+```

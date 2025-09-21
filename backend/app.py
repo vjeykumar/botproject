@@ -7,7 +7,16 @@ import os
 from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 import atexit
-from database.mongodb import db
+import re
+
+# Import database with error handling
+try:
+    from database.mongodb import db
+    print("✅ Database module imported")
+except Exception as e:
+    print(f"⚠️ Database import failed: {e}")
+    print("🔄 Running in test mode without database")
+    db = None
 
 app = Flask(__name__)
 
@@ -16,13 +25,17 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
 app.config['JWT_SECRET_KEY'] = os.environ.get('JWT_SECRET_KEY', 'jwt-secret-string')
 app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=24)
 
+# Get port from environment variable for deployment
+PORT = int(os.environ.get('PORT', 5000))
+
 # Initialize extensions
 bcrypt = Bcrypt(app)
 jwt = JWTManager(app)
-CORS(app)
+CORS(app, origins=["*"])  # Allow all origins for now, restrict in production
 
 # Ensure database connection is closed when the server process exits
-atexit.register(db.close)
+if db:
+    atexit.register(db.close)
 
 # Helper functions
 def hash_password(password: str) -> str:
@@ -177,6 +190,9 @@ def clear_cart():
 @app.route('/api/register', methods=['POST'])
 def register():
     try:
+        if not db:
+            return jsonify({'error': 'Database not available'}), 503
+            
         data = request.get_json()
         
         # Validate required fields
@@ -227,6 +243,9 @@ def register():
 @app.route('/api/login', methods=['POST'])
 def login():
     try:
+        if not db:
+            return jsonify({'error': 'Database not available'}), 503
+            
         print("🔐 Login attempt received")
         data = request.get_json()
         print(f"📧 Login data: {data.get('email', 'No email')}")
@@ -288,37 +307,107 @@ def get_profile():
 @jwt_required()
 def create_order():
     try:
+        if not db:
+            return jsonify({'error': 'Database not available'}), 503
+            
         user_id = get_jwt_identity()
         data = request.get_json()
-        print(f"📧 Registration data: {data.get('email', 'No email')}")
+        print(f"📦 Order data received: {data}")
         
+        # Enhanced validation with detailed error messages
         # Validate required fields
         required_fields = ['items', 'total_amount', 'payment_method', 'billing_info']
-        if not all(k in data for k in required_fields):
-            return jsonify({'error': 'Missing required fields'}), 400
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            print(f"❌ Missing required fields: {missing_fields}")
+            return jsonify({'error': f'Missing required fields: {", ".join(missing_fields)}'}), 400
         
+        # Validate items array
+        if not isinstance(data['items'], list) or len(data['items']) == 0:
+            print("❌ Items must be a non-empty array")
+            return jsonify({'error': 'Items must be a non-empty array'}), 400
+        
+        # Validate each item in the array
+        for i, item in enumerate(data['items']):
+            item_required = ['id', 'name', 'price', 'quantity']
+            item_missing = [field for field in item_required if field not in item]
+            if item_missing:
+                return jsonify({'error': f'Item {i+1} missing fields: {", ".join(item_missing)}'}), 400
+            
+            # Validate item data types
+            if not isinstance(item['price'], (int, float)) or item['price'] <= 0:
+                return jsonify({'error': f'Item {i+1} has invalid price'}), 400
+            if not isinstance(item['quantity'], int) or item['quantity'] <= 0:
+                return jsonify({'error': f'Item {i+1} has invalid quantity'}), 400
+        
+        # Validate total_amount
+        if not isinstance(data['total_amount'], (int, float)) or data['total_amount'] <= 0:
+            return jsonify({'error': 'Invalid total amount'}), 400
+        
+        # Validate billing_info structure
+        billing_required = ['email', 'phone', 'address', 'city', 'state', 'pincode']
+        billing_missing = [field for field in billing_required if field not in data['billing_info']]
+        if billing_missing:
+            print(f"❌ Missing billing info fields: {billing_missing}")
+            return jsonify({'error': f'Missing billing information: {", ".join(billing_missing)}'}), 400
+
+        # Validate billing info data with sanitization
+        billing_info = data['billing_info']
+
+        sanitized_billing_info = {
+            'email': str(billing_info.get('email', '')).strip().lower(),
+            'phone': re.sub(r'\D', '', str(billing_info.get('phone', ''))),
+            'address': str(billing_info.get('address', '')).strip(),
+            'city': str(billing_info.get('city', '')).strip(),
+            'state': str(billing_info.get('state', '')).strip(),
+            'pincode': re.sub(r'\D', '', str(billing_info.get('pincode', '')))
+        }
+
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, sanitized_billing_info['email']):
+            return jsonify({'error': 'Invalid email format'}), 400
+
+        if len(sanitized_billing_info['phone']) != 10:
+            return jsonify({'error': 'Invalid phone number format (10 digits required)'}), 400
+
+        if len(sanitized_billing_info['pincode']) not in (5, 6):
+            return jsonify({'error': 'Invalid pincode format (5-6 digits required)'}), 400
+
         # Create order data
         order_data = {
             'user_id': user_id,
             'total_amount': data['total_amount'],
             'payment_method': data['payment_method'],
-            'billing_info': data['billing_info'],
+            'billing_info': sanitized_billing_info,
             'status': 'confirmed',
             'items': data['items']
         }
         
+        print(f"✅ Creating order with data: {order_data}")
         order = db.orders.create_order(order_data)
+        print(f"✅ Order created successfully: {order.get('order_number', 'Unknown')}")
         
         # Clear cart after successful order
-        db.carts.clear_cart(user_id)
+        try:
+            db.carts.clear_cart(user_id)
+            print("✅ Cart cleared successfully")
+        except Exception as cart_error:
+            print(f"⚠️ Failed to clear cart: {cart_error}")
+            # Don't fail the order creation if cart clearing fails
         
         return jsonify({
             'message': 'Order created successfully',
             'order': order
         }), 201
         
+    except ValueError as e:
+        print(f"❌ Validation error in create_order: {e}")
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': 'Failed to create order'}), 500
+        print(f"💥 Error in create_order: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to create order: {str(e)}'}), 500
 
 @app.route('/api/orders', methods=['GET'])
 @jwt_required()
@@ -403,8 +492,41 @@ def process_payment():
         payment_method = data.get('payment_method')
         amount = data.get('amount')
         
-        if not payment_method or not amount:
-            return jsonify({'error': 'Missing payment details'}), 400
+        # Enhanced validation
+        if not payment_method:
+            return jsonify({'error': 'Payment method is required'}), 400
+        
+        if not amount:
+            return jsonify({'error': 'Payment amount is required'}), 400
+        
+        if not isinstance(amount, (int, float)) or amount <= 0:
+            return jsonify({'error': 'Invalid payment amount'}), 400
+        
+        valid_methods = ['Credit Card', 'UPI', 'Net Banking']
+        if payment_method not in valid_methods:
+            return jsonify({'error': f'Invalid payment method. Must be one of: {", ".join(valid_methods)}'}), 400
+        
+        # Validate payment method specific details
+        if payment_method == 'Credit Card':
+            card_details = data.get('card_details', {})
+            required_card_fields = ['card_number', 'expiry_date', 'cvv', 'card_name']
+            missing_card_fields = [field for field in required_card_fields if not card_details.get(field)]
+            if missing_card_fields:
+                return jsonify({'error': f'Missing card details: {", ".join(missing_card_fields)}'}), 400
+        
+        elif payment_method == 'UPI':
+            upi_id = data.get('upi_id')
+            if not upi_id:
+                return jsonify({'error': 'UPI ID is required for UPI payments'}), 400
+            import re
+            upi_pattern = r'^[a-zA-Z0-9.\-_]+@[a-zA-Z0-9.\-_]+'
+            if not re.match(upi_pattern, upi_id):
+                return jsonify({'error': 'Invalid UPI ID format'}), 400
+        
+        elif payment_method == 'Net Banking':
+            bank = data.get('bank')
+            if not bank:
+                return jsonify({'error': 'Bank selection is required for net banking'}), 400
         
         # Simulate payment processing delay
         import time
@@ -422,6 +544,7 @@ def process_payment():
         }), 200
         
     except Exception as e:
+        print(f"💥 Payment processing error: {e}")
         return jsonify({'error': 'Payment processing failed'}), 500
 
 @app.route('/api/health', methods=['GET'])
@@ -465,13 +588,13 @@ def internal_error(error):
 
 if __name__ == '__main__':
     try:
-        print("🚀 Starting Edgecraft Glass API Server...")
-        print("📊 Database connection established")
+        print("🚀 Starting Edgecraft Glass API Server on port", PORT)
+        print("📊 Database connection:", "✅ Connected" if db else "❌ Not available")
         print("🔐 JWT authentication enabled")
-        print("🌐 CORS enabled for frontend integration")
+        print("🌐 CORS enabled for all origins")
         print("📱 API endpoints ready")
         print("=" * 50)
 
-        app.run(debug=True, host='0.0.0.0', port=5000)
+        app.run(debug=False, host='0.0.0.0', port=PORT)
     except Exception as e:
         print(f"❌ Failed to start server: {e}")

@@ -38,7 +38,19 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onPaymentC
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    let processedValue = value;
+
+    if (name === 'phone') {
+      processedValue = value.replace(/\D/g, '').slice(0, 10);
+    } else if (name === 'pincode') {
+      processedValue = value.replace(/\D/g, '').slice(0, 6);
+    } else if (name === 'email') {
+      processedValue = value.trim();
+    } else {
+      processedValue = value.trimStart();
+    }
+
+    setFormData(prev => ({ ...prev, [name]: processedValue }));
   };
 
   const handlePayment = async (e: React.FormEvent) => {
@@ -46,7 +58,20 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onPaymentC
     setIsProcessing(true);
 
     try {
+      console.log('🔄 Starting payment process...');
+      console.log('Cart items:', cartItems);
+      console.log('Form data:', formData);
+      
       // Create order in backend
+      const sanitizedBillingInfo = {
+        email: formData.email.trim().toLowerCase(),
+        phone: formData.phone.replace(/\D/g, ''),
+        address: formData.address.trim(),
+        city: formData.city.trim(),
+        state: formData.state.trim(),
+        pincode: formData.pincode.replace(/\D/g, ''),
+      };
+
       const orderData = {
         items: cartItems.map(item => ({
           id: item.id,
@@ -56,25 +81,52 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onPaymentC
           customization: item.customization
         })),
         total_amount: total,
-        payment_method: paymentMethod === 'card' ? 'Credit Card' : 
+        payment_method: paymentMethod === 'card' ? 'Credit Card' :
                       paymentMethod === 'upi' ? 'UPI' : 'Net Banking',
-        billing_info: {
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          state: formData.state,
-          pincode: formData.pincode
-        }
+        billing_info: sanitizedBillingInfo
       };
 
+      console.log('📦 Order data to be sent:', orderData);
+
+      // Validate required fields before sending
+      if (!orderData.items || orderData.items.length === 0) {
+        throw new Error('No items in cart');
+      }
+
+      if (!orderData.billing_info.email || !orderData.billing_info.phone) {
+        throw new Error('Please fill in all required billing information');
+      }
+
+      if (orderData.billing_info.phone.length !== 10) {
+        throw new Error('Please enter a valid 10-digit phone number.');
+      }
+
+      if (orderData.billing_info.pincode.length < 5 || orderData.billing_info.pincode.length > 6) {
+        throw new Error('Please enter a valid 5 or 6 digit pincode.');
+      }
+
+      console.log('✅ Order data validation passed');
       await apiService.createOrder(orderData);
+      console.log('✅ Order created successfully');
       setIsProcessing(false);
       onPaymentComplete();
     } catch (error) {
       console.error('Payment failed:', error);
       setIsProcessing(false);
-      // You might want to show an error message here
+      
+      // Show user-friendly error message
+      let errorMessage = 'Payment failed. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('No items in cart')) {
+          errorMessage = 'Your cart is empty. Please add items before checkout.';
+        } else if (error.message.includes('billing information')) {
+          errorMessage = 'Please fill in all required billing information.';
+        } else if (error.message.includes('server')) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      }
+      
+      alert(errorMessage); // You might want to replace this with a proper error display
     }
   };
 
@@ -301,6 +353,9 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onPaymentC
                         value={formData.phone}
                         onChange={handleInputChange}
                         required
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={10}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>
@@ -359,6 +414,9 @@ export const PaymentScreen: React.FC<PaymentScreenProps> = ({ onBack, onPaymentC
                         value={formData.pincode}
                         onChange={handleInputChange}
                         required
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       />
                     </div>

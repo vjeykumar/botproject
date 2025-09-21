@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://edgecraft-glass-api.onrender.com/api';
 
 interface ApiResponse<T> {
   data?: T;
@@ -8,7 +8,7 @@ interface ApiResponse<T> {
 
 async function makeRequest(url: string, options: RequestInit = {}): Promise<Response> {
   try {
-    console.log('Making API request to:', url);
+    console.log('🌐 Making API request to:', url);
     
     const response = await fetch(url, {
       headers: {
@@ -18,17 +18,17 @@ async function makeRequest(url: string, options: RequestInit = {}): Promise<Resp
       ...options,
     });
 
-    console.log('API Response status:', response.status);
+    console.log('✅ API Response status:', response.status);
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('API Response error:', errorText);
+      console.error('❌ API Response error:', errorText);
       throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
 
     return response;
   } catch (error) {
-    console.error('API request failed for', url, ':', {
+    console.error('💥 API request failed for', url, ':', {
       url,
       error: error instanceof Error ? error.message : error,
       stack: error instanceof Error ? error.stack : undefined
@@ -36,7 +36,7 @@ async function makeRequest(url: string, options: RequestInit = {}): Promise<Resp
     
     // Check if it's a network error
     if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error('Unable to connect to server. Please ensure the backend is running on http://localhost:5000');
+      throw new Error('Unable to connect to server. Please ensure the backend is running.');
     }
     
     throw error;

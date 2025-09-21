@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "app.py",
+      "use": "@vercel/python"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "app.py"
+    }
+  ],
+  "env": {
+    "SECRET_KEY": "prod-secret-key-edgecraft-glass-2025-secure",
+    "JWT_SECRET_KEY": "prod-jwt-secret-edgecraft-glass-2025-secure",
+    "MONGODB_URI": "mongodb+srv://edgecraft:glass2025@cluster0.mongodb.net/",
+    "MONGODB_DB_NAME": "edgecraft_glass_prod",
+    "FLASK_ENV": "production"
+  }
+}

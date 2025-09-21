@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: edgecraft-glass-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: SECRET_KEY
+        value: prod-secret-key-edgecraft-glass-2025-secure
+      - key: JWT_SECRET_KEY
+        value: prod-jwt-secret-edgecraft-glass-2025-secure
+      - key: MONGODB_URI
+        value: mongodb+srv://edgecraft:glass2025@cluster0.mongodb.net/
+      - key: MONGODB_DB_NAME
+        value: edgecraft_glass_prod
+      - key: FLASK_ENV
+        value: production

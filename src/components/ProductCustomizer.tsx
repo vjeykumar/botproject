@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Calculator, ShoppingCart } from 'lucide-react';
 import { Product } from './ProductCatalog';
 import { useCart } from '../contexts/CartContext';
+import { resolveProductImage } from '../utils/productImages';
 
 interface ProductCustomizerProps {
   product: Product;
@@ -13,6 +14,7 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ product, o
   const [width, setWidth] = useState(36);
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useCart();
+  const { src, placeholder } = resolveProductImage(product);
 
   const area = (height * width) / 144; // Convert to square feet
   const totalPrice = area * product.basePrice * quantity;
@@ -52,9 +54,14 @@ export const ProductCustomizer: React.FC<ProductCustomizerProps> = ({ product, o
           <div className="grid md:grid-cols-2 gap-6">
             <div>
               <img
-                src={product.image}
+                src={src}
                 alt={product.name}
                 className="w-full h-48 object-cover rounded-lg"
+                onError={(event) => {
+                  if (event.currentTarget.src !== placeholder) {
+                    event.currentTarget.src = placeholder;
+                  }
+                }}
               />
             </div>
             

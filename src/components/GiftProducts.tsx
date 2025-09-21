@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Gift, Heart, Star, ShoppingCart, Eye, Package, Sparkles } from 'lucide-react';
 import { useCart } from '../contexts/CartContext';
+import { resolveProductImage } from '../utils/productImages';
 
 interface GiftProduct {
   id: string;
@@ -166,6 +167,8 @@ export const GiftProducts: React.FC = () => {
   };
 
   if (selectedProduct) {
+    const { src, placeholder } = resolveProductImage(selectedProduct);
+
     return (
       <div className="max-w-7xl mx-auto">
         {/* Product Detail View */}
@@ -183,9 +186,14 @@ export const GiftProducts: React.FC = () => {
           <div className="space-y-4">
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
               <img
-                src={selectedProduct.image}
+                src={src}
                 alt={selectedProduct.name}
                 className="w-full h-96 object-cover"
+                onError={(event) => {
+                  if (event.currentTarget.src !== placeholder) {
+                    event.currentTarget.src = placeholder;
+                  }
+                }}
               />
             </div>
             
@@ -362,45 +370,53 @@ export const GiftProducts: React.FC = () => {
 
       {/* Products Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredAndSortedProducts.map(product => (
-          <div
-            key={product.id}
-            className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 group"
-          >
-            <div className="relative h-48 overflow-hidden">
-              <img
-                src={product.image}
-                alt={product.name}
-                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 cursor-pointer"
-                onClick={() => setSelectedProduct(product)}
-              />
-              
-              {/* Badges */}
-              <div className="absolute top-3 left-3 flex flex-col space-y-2">
-                {product.popular && (
-                  <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center space-x-1">
-                    <Heart className="h-3 w-3" />
-                    <span>Popular</span>
-                  </div>
-                )}
-                {product.originalPrice && (
-                  <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
-                    {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
-                  </div>
-                )}
-              </div>
+        {filteredAndSortedProducts.map(product => {
+          const { src, placeholder } = resolveProductImage(product);
 
-              {/* Quick View Button */}
-              <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                <button
+          return (
+            <div
+              key={product.id}
+              className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 group"
+            >
+              <div className="relative h-48 overflow-hidden">
+                <img
+                  src={src}
+                  alt={product.name}
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110 cursor-pointer"
                   onClick={() => setSelectedProduct(product)}
-                  className="bg-white text-gray-800 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center space-x-2"
-                >
-                  <Eye className="h-4 w-4" />
-                  <span>Quick View</span>
-                </button>
+                  onError={(event) => {
+                    if (event.currentTarget.src !== placeholder) {
+                      event.currentTarget.src = placeholder;
+                    }
+                  }}
+                />
+
+                {/* Badges */}
+                <div className="absolute top-3 left-3 flex flex-col space-y-2">
+                  {product.popular && (
+                    <div className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-medium flex items-center space-x-1">
+                      <Heart className="h-3 w-3" />
+                      <span>Popular</span>
+                    </div>
+                  )}
+                  {product.originalPrice && (
+                    <div className="bg-green-500 text-white px-3 py-1 rounded-full text-xs font-medium">
+                      {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick View Button */}
+                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                  <button
+                    onClick={() => setSelectedProduct(product)}
+                    className="bg-white text-gray-800 px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors flex items-center space-x-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>Quick View</span>
+                  </button>
+                </div>
               </div>
-            </div>
             
             <div className="p-6">
               <div className="flex items-center justify-between mb-2">
@@ -433,8 +449,9 @@ export const GiftProducts: React.FC = () => {
                 <span>Add to Cart</span>
               </button>
             </div>
-          </div>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       {/* Gift Services */}
