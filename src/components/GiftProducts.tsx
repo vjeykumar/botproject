@@ -125,7 +125,12 @@ export const GiftProducts: React.FC = () => {
   const [selectedProduct, setSelectedProduct] = useState<GiftProduct | null>(null);
   const { addToCart } = useCart();
 
-  const categories = ['All', ...Array.from(new Set(giftProducts.map(p => p.category)))];
+  const categories = [
+    'All',
+    ...Array.from(new Set(giftProducts.map(p => p.category))).filter(
+      category => category !== 'Personalized'
+    )
+  ];
 
   const filteredAndSortedProducts = giftProducts
     .filter(product => selectedCategory === 'All' || product.category === selectedCategory)
