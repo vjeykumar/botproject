@@ -18,37 +18,61 @@ function AppContent() {
   const [activeSection, setActiveSection] = useState<'products' | 'gifts' | 'cart' | 'feedback' | 'orders'>('products');
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
+  const handleSectionChange = (
+    section: 'products' | 'gifts' | 'cart' | 'feedback' | 'orders'
+  ) => {
+    setActiveSection(section);
+    setSelectedProduct(null);
+  };
+
+  const handleBackToProducts = () => {
+    setSelectedProduct(null);
+    setActiveSection('products');
+  };
+
+  const renderContent = () => {
+    if (selectedProduct) {
+      return (
+        <ProductDetails
+          product={selectedProduct}
+          onBack={() => setSelectedProduct(null)}
+        />
+      );
+    }
+
+    switch (activeSection) {
+      case 'gifts':
+        return <GiftProducts />;
+      case 'orders':
+        return <OrdersPage />;
+      case 'feedback':
+        return <CustomerFeedback />;
+      case 'cart':
+        return <Cart onBackToProducts={handleBackToProducts} />;
+      case 'products':
+      default:
+        return <ProductCatalog onProductClick={setSelectedProduct} />;
+    }
+  };
+
   if (!isAuthenticated) {
     return <LoginScreen onLogin={() => {}} />;
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
-        activeSection={activeSection} 
-        setActiveSection={setActiveSection}
-        onBackToProducts={() => setSelectedProduct(null)}
+      <Header
+        activeSection={activeSection}
+        setActiveSection={handleSectionChange}
+        onBackToProducts={handleBackToProducts}
         showBackButton={!!selectedProduct}
       />
-      {!selectedProduct && <Hero />}
-      
+      {!selectedProduct && activeSection === 'products' && <Hero />}
+
       <main className="container mx-auto px-4 py-8">
-        {selectedProduct ? (
-          <ProductDetails 
-            product={selectedProduct} 
-            onBack={() => setSelectedProduct(null)} 
-          />
-        ) : (
-          <>
-            {activeSection === 'products' && <ProductCatalog onProductClick={setSelectedProduct} />}
-            {activeSection === 'orders' && <OrdersPage />}
-            {activeSection === 'feedback' && <CustomerFeedback />}
-          </>
-        )}
-        {activeSection === 'gifts' && <GiftProducts />}
-        {activeSection === 'cart' && <Cart onBackToProducts={() => setActiveSection('products')} />}
+        {renderContent()}
       </main>
-      
+
       <Footer />
     </div>
   );
