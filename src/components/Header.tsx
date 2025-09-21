@@ -66,7 +66,7 @@ export const Header: React.FC<HeaderProps> = ({
               }`}
             >
               <Gift className="h-5 w-5" />
-              <span className="font-medium">Gifts</span>
+              <span className="font-medium">Gift Products</span>
             </button>
             
             <button
